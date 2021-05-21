@@ -5,6 +5,8 @@ const dotenv = require("dotenv");
 const passport = require("passport");
 const path = require("path");
 const userRouter = require("./routes/users");
+const groupRouter = require("./routes/groups");
+const testRouter = require("./routes/test");
 
 dotenv.config();
 const app = express();
@@ -47,6 +49,8 @@ app.use(cors());
 app.use(passport.initialize());
 
 app.use("/users", userRouter);
+app.use("/groups", groupRouter);
+app.use("/test", testRouter);
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log("Listening on port: " + PORT));

@@ -1,13 +1,17 @@
 const mongoose = require("mongoose");
 const passportLocalMongoose = require("passport-local-mongoose");
-const { messageSchema } = require("./message");
 
 const chatSchema = new mongoose.Schema({
   to: {
     type: mongoose.Types.ObjectId,
     ref: "User",
   },
-  messages: [messageSchema],
+  messages: [
+    {
+      type: mongoose.Types.ObjectId,
+      ref: "Message",
+    },
+  ],
 });
 
 const userSchema = new mongoose.Schema(
@@ -39,6 +43,12 @@ const userSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    incomingReq: [
+      {
+        type: mongoose.Types.ObjectId,
+        ref: "User",
+      },
+    ],
   },
   {
     timestamps: true,
@@ -47,4 +57,4 @@ const userSchema = new mongoose.Schema(
 
 userSchema.plugin(passportLocalMongoose);
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = { chatSchema, Users: mongoose.model("User", userSchema) };
