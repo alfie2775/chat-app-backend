@@ -16,13 +16,13 @@ const sendMessageToGroup = async (text, user, groupId, tagged) => {
   });
   const res = await Group.updateOne(
     { _id: groupId },
-    { $push: { messages: gm } }
+    { $push: { messages: gm._id } }
   )
     .then((res) => res)
     .catch((err) => ({ err }));
   if (res.err) return false;
-  gm.save();
-  return true;
+  await gm.save();
+  return gm;
 };
 
 const addMessage = async (from, to, message) => {
@@ -31,14 +31,14 @@ const addMessage = async (from, to, message) => {
     user.chat = user.chat.map((msg) => {
       if (msg.to == to) {
         flag = false;
-        msg.messages = [...msg.messages, message];
+        msg.messages = [...msg.messages, message._id];
       }
       return msg;
     });
     if (flag) {
       user.chat = [
         ...user.chat,
-        { to: mongoose.Types.ObjectId(to), messages: [message] },
+        { to: mongoose.Types.ObjectId(to), messages: [message._id] },
       ];
     }
     return user
@@ -63,7 +63,7 @@ const sendMessageToUser = async (text, from, to, tagged) => {
   const res =
     (await addMessage(to, from, msg)) && (await addMessage(from, to, msg));
   await msg.save();
-  return res;
+  return msg;
 };
 
 module.exports = {

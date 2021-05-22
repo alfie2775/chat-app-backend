@@ -6,12 +6,20 @@ const passport = require("passport");
 const path = require("path");
 const userRouter = require("./routes/users");
 const groupRouter = require("./routes/groups");
-const testRouter = require("./routes/test");
+// const testRouter = require("./routes/test");
 
 dotenv.config();
 const app = express();
 const server = require("http").createServer(app);
 const socketio = require("socket.io");
+const {
+  sendMessageToGroup,
+  sendMessageToUser,
+} = require("./controllers/messages");
+const { getGroupMembers } = require("./controllers/groups");
+const group = require("./models/group");
+const { GroupMessage } = require("./models/groupMessage");
+const { Message } = require("./models/message");
 const io = new socketio.Server(server, {
   cors: {
     origin: "*",
@@ -30,16 +38,42 @@ client
   })
   .catch((err) => console.log(err));
 
-io.use(passport.initialize());
-
+var socketIds = {};
+var idsToNames = {};
 io.on("connection", (socket) => {
-  console.log("A user has been connected");
-  socket.on("text message", (msg) => {
-    console.log("The message is", msg);
-    socket.broadcast.emit("incomming message", { msg });
+  socketIds[socket.handshake.query.id] = socket.id;
+  console.log(socket.handshake.query.id, "has been joined");
+  idsToNames[socket.id] = socket.handshake.query.id;
+  socket.on("group message", async ({ groupId, msg, tagged }) => {
+    console.log(groupId, msg);
+    const gm = await sendMessageToGroup(
+      msg,
+      idsToNames[socket.id],
+      groupId,
+      tagged
+    );
+    console.log(gm.text);
+    const groupMembers = await getGroupMembers(groupId);
+    console.log(groupMembers);
+    if (gm !== false)
+      groupMembers.forEach((member) => {
+        io.to(socketIds[member]).emit("incoming group message", gm);
+      });
   });
-  socket.on("disconnect", () => {
-    io.emit("incomming message", { msg: "A user has been dissconnected" });
+  socket.on("personal message", async ({ msg, to, tagged }) => {
+    const pm = await sendMessageToUser(msg, idsToNames[socket.id], to, tagged);
+    if (pm !== false)
+      io.to(socketIds[to]).emit("incoming personal message", pm);
+  });
+  socket.on("send friend request", async ({ from, to }) => {
+    const user = await sendFriendRequest(from, to);
+    io.to(socketIds[to]).emit("incoming friend request", user);
+  });
+  socket.on("disconnecting", () => {
+    delete idsToNames[socketIds[socket.id]];
+    delete socketIds[socket.id];
+    console.log("a user is gonna fucked up");
+    socket.broadcast.emit("incoming message", "a user gone");
   });
 });
 
@@ -50,7 +84,7 @@ app.use(passport.initialize());
 
 app.use("/users", userRouter);
 app.use("/groups", groupRouter);
-app.use("/test", testRouter);
+// app.use("/test", testRouter);
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log("Listening on port: " + PORT));

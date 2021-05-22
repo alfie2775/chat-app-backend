@@ -6,6 +6,7 @@ const mongoose = require("mongoose");
 
 router.get("/", verifyUser, verifyAdmin, (req, res, next) => {
   Users.find({ admin: false })
+    .populate("groups")
     .then((users) => res.status(200).json(users))
     .catch((err) => res.json(err));
 });

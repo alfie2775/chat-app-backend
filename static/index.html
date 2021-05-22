@@ -4,31 +4,69 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat App Backend</title>
+  </head>
+  <body>
+    <p>
+      This chat app is made by
+      <a href="https://alfie.vercel.app" target="_blank">Tarun</a> and
+      <a href="https://pavanteja.netlify.app" target="_blank">Pavan Teja.</a>
+    </p>
+    <p>To view the app <a href="" target="_blank">Click here</a></p>
+  </body>
+</html>
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Backend</title>
   </head>
   <body>
-    <p>Hello</p>
-    <div class="messages"></div>
-    <input type="text" class="message" />
-    <button class="send">Send</button>
+    <p class="hello">Hello</p>
+    <hr />
+    <main>
+      <p>log in</p>
+      <label for="">enter your name</label>
+      <input type="text" />
+      <button>enter chat</button>
+    </main>
+
     <script src="socket.io/socket.io.js"></script>
     <script>
-      let socket = io();
-      const input = document.querySelector(".message");
-      const button = document.querySelector(".send");
-      button.addEventListener("click", (e) => {
-        e.preventDefault();
-        if (input.value) {
-          socket.emit("text message", input.value);
-          const messages = document.querySelector(".messages");
-          messages.innerHTML += `<p>${input.value}</p>`;
-          input.value = "";
-        }
-      });
-      socket.on("incomming message", ({ msg }) => {
-        const messages = document.querySelector(".messages");
-        messages.innerHTML += `<p>${msg}</p>`;
+      document.querySelector("button").addEventListener("click", () => {
+        const id = document.querySelector("input").value;
+        let groupId = "60a8e7f8336b28379c1efd47";
+        let socket = io({
+          query: {
+            id: id,
+          },
+        });
+        document.querySelector(".hello").textContent += " " + id;
+        document.querySelector(
+          "main"
+        ).innerHTML = `<div class="messages"></div><input type="text" class="message" /><input type="text" class="to" /><button class="send">Send</button>`;
+        document.querySelector(".send").addEventListener("click", () => {
+          socket.emit("personal message", {
+            msg: document.querySelector(".message").value,
+            to: document.querySelector(".to").value,
+          });
+        });
+        socket.on("incoming personal message", ({ text, from }) => {
+          console.log("Hello");
+          document.querySelector(".messages").innerHTML += `<p><b>${
+            from == id ? "me" : from
+          }</b>: ${text}</p>`;
+        });
+        socket.on("incoming group message", (gm) => {
+          console.log(gm);
+          document.querySelector(".messages").innerHTML += `<p><b>${
+            gm.user == id ? "me" : gm.user
+          }</b>: ${gm.text}</p>`;
+        });
       });
     </script>
   </body>
-</html>
+</html> -->

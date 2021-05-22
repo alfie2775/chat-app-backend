@@ -39,7 +39,13 @@ router.post("/add", verifyUser, async (req, res) => {
   );
   await Group.updateOne(
     { _id: req.body.groupId },
-    { $push: { members: { $each: req.body.users } } }
+    {
+      $push: {
+        members: {
+          $each: req.body.users.filter((user) => Types.ObjectId(user)),
+        },
+      },
+    }
   );
   res.send({ success: true });
 });
