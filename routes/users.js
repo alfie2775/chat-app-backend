@@ -81,7 +81,6 @@ router.delete("/remove-friend", verifyUser, (req, res, next) => {
 });
 
 router.get("/all-chats", verifyUser, async (req, res) => {
-  console.log(req.user);
   const personal = await Users.findOne({ _id: req.user._id })
     .populate({
       path: "chats",
@@ -104,7 +103,7 @@ router.get("/all-chats", verifyUser, async (req, res) => {
       })
       .then((groups) => groups)),
   ];
-  res.send({ personal, groups });
+  res.send([...personal, ...groups]);
 });
 
 router.get("/friends", verifyUser, async (req, res) => {
@@ -115,7 +114,7 @@ router.get("/friends", verifyUser, async (req, res) => {
 });
 
 router.get("/incoming-requests", verifyUser, async (req, res) => {
-  const ir = await (await Users.findOne({ _id: req.user._id }))
+  const ir = await Users.findOne({ _id: req.user._id })
     .populate("incomingReq")
     .then((friends) => friends.incomingReq);
   res.send(ir);
