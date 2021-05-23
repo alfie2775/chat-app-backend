@@ -13,13 +13,15 @@ router.get("/", verifyUser, verifyAdmin, (req, res, next) => {
 
 router.post("/login", passport.authenticate("local"), (req, res, next) => {
   const token = getToken({ _id: req.user._id });
-  res.status(200).json({ success: true, token });
+  res.status(200).json({ success: true, token, user: req.user });
 });
 
 router.post("/signup", (req, res, next) => {
   Users.register(
     {
       username: req.body.username,
+      firstname: req.body.firstname,
+      lastname: req.body.lastname,
     },
     req.body.password,
     (err, user) => {
@@ -28,7 +30,7 @@ router.post("/signup", (req, res, next) => {
       } else {
         passport.authenticate("local")(req, res, () => {
           const token = getToken({ _id: user._id });
-          res.status(200).json({ success: true, token });
+          res.status(200).json({ success: true, token, user: req.user });
         });
       }
     }
@@ -75,6 +77,28 @@ router.delete("/remove-friend", verifyUser, (req, res, next) => {
         .catch((err) => res.status(500).send({ ...err, success: false }))
     )
     .catch((err) => res.status(500).send({ ...err, success: false }));
+});
+
+router.get("/userinfo", verifyUser, (req, res, next) => {
+  Users.findOne({ _id: req.user._id })
+    .populate({
+      path: "groups chat friends incomingReq",
+      populate: [
+        {
+          path: "messages members admins createdBy",
+          populate: [
+            {
+              path: "user text",
+            },
+          ],
+        },
+        {
+          path: "messages to",
+        },
+      ],
+    })
+    .then((user) => res.send({ user }))
+    .catch((err) => res.send({ success: false, err }));
 });
 
 module.exports = router;

@@ -19,7 +19,7 @@ router.post("/create", verifyUser, async (req, res, next) => {
     return await user.save().then((res) => res);
   });
   if (resp.err) res.status(500);
-  else res.send({ success: true });
+  else res.send({ success: true, group });
 });
 
 router.post("/add-admins", verifyUser, async (req, res, next) => {
@@ -42,7 +42,7 @@ router.post("/add", verifyUser, async (req, res) => {
     {
       $push: {
         members: {
-          $each: req.body.users.filter((user) => Types.ObjectId(user)),
+          $each: req.body.users.map((user) => Types.ObjectId(user)),
         },
       },
     }
@@ -65,6 +65,22 @@ router.delete("/leave", verifyUser, async (req, res) => {
     }
   );
   res.send({ success: true });
+});
+
+router.delete("/remove-members", verifyUser, async (req, res, next) => {
+  const group = await Group.findOne({ _id: req.body.groupId }).then(
+    (group) => group
+  );
+  if (group.admins.find((admin) => admin == req.user._id)) {
+    req.body.users.forEach(async (user) => {
+      group.members.remove(user);
+      await Users.updateOne(
+        { _id: user },
+        { $pull: { groups: req.body.groupId } }
+      );
+    });
+    res.send({ success: true });
+  } else res.send({ err: "You are not admin" });
 });
 
 module.exports = router;
