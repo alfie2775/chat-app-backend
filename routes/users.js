@@ -3,6 +3,7 @@ const { verifyUser, verifyAdmin, getToken } = require("../authenticate");
 const { Users } = require("../models/users");
 const router = require("express").Router();
 const mongoose = require("mongoose");
+const Group = require("../models/group");
 
 router.get("/", verifyUser, verifyAdmin, (req, res, next) => {
   Users.find({ admin: false })
@@ -79,26 +80,45 @@ router.delete("/remove-friend", verifyUser, (req, res, next) => {
     .catch((err) => res.status(500).send({ ...err, success: false }));
 });
 
-router.get("/userinfo", verifyUser, (req, res, next) => {
-  Users.findOne({ _id: req.user._id })
+router.get("/all-chats", verifyUser, async (req, res) => {
+  console.log(req.user);
+  const personal = await Users.findOne({ _id: req.user._id })
     .populate({
-      path: "groups chat friends incomingReq",
+      path: "chats",
       populate: [
         {
-          path: "messages members admins createdBy",
-          populate: [
-            {
-              path: "user text",
-            },
-          ],
-        },
-        {
-          path: "messages to",
+          path: "to messages",
         },
       ],
     })
-    .then((user) => res.send({ user }))
-    .catch((err) => res.send({ success: false, err }));
+    .then((user) => user.chats || []);
+  let groups = [
+    ...(await Group.find({ _id: { $in: req.user.groups } })
+      .populate({
+        path: "messages members admins createdBy",
+        populate: [
+          {
+            path: "user text",
+          },
+        ],
+      })
+      .then((groups) => groups)),
+  ];
+  res.send({ personal, groups });
+});
+
+router.get("/friends", verifyUser, async (req, res) => {
+  const friends = await Users.findOne({ _id: req.user._id })
+    .populate("friends")
+    .then((friends) => friends.friends);
+  res.send(friends);
+});
+
+router.get("/incoming-requests", verifyUser, async (req, res) => {
+  const ir = await (await Users.findOne({ _id: req.user._id }))
+    .populate("incomingReq")
+    .then((friends) => friends.incomingReq);
+  res.send(ir);
 });
 
 module.exports = router;
