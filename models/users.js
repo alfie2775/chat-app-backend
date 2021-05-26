@@ -1,18 +1,23 @@
 const mongoose = require("mongoose");
 const passportLocalMongoose = require("passport-local-mongoose");
 
-const chatSchema = new mongoose.Schema({
-  to: {
-    type: mongoose.Types.ObjectId,
-    ref: "User",
-  },
-  messages: [
-    {
+const chatSchema = new mongoose.Schema(
+  {
+    to: {
       type: mongoose.Types.ObjectId,
-      ref: "Message",
+      ref: "User",
     },
-  ],
-});
+    messages: [
+      {
+        type: mongoose.Types.ObjectId,
+        ref: "Message",
+      },
+    ],
+  },
+  {
+    timestamps: true,
+  }
+);
 
 const userSchema = new mongoose.Schema(
   {

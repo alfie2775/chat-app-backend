@@ -17,9 +17,6 @@ const {
   sendMessageToUser,
 } = require("./controllers/messages");
 const { getGroupMembers } = require("./controllers/groups");
-const group = require("./models/group");
-const { GroupMessage } = require("./models/groupMessage");
-const { Message } = require("./models/message");
 const io = new socketio.Server(server, {
   cors: {
     origin: "*",
@@ -52,9 +49,7 @@ io.on("connection", (socket) => {
       groupId,
       tagged
     );
-    console.log(gm.text);
     const groupMembers = await getGroupMembers(groupId);
-    console.log(groupMembers);
     if (gm !== false)
       groupMembers.forEach((member) => {
         io.to(socketIds[member]).emit("incoming group message", gm);
@@ -86,7 +81,7 @@ app.use("/users", userRouter);
 app.use("/groups", groupRouter);
 // app.use("/test", testRouter);
 
-const PORT = process.env.PORT || 5000;
+const PORT = parseInt(process.env.PORT) || 5000;
 server.listen(PORT, () => console.log("Listening on port: " + PORT));
 
 module.exports = io;

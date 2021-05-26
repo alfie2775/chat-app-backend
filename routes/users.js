@@ -7,7 +7,6 @@ const Group = require("../models/group");
 
 router.get("/", verifyUser, verifyAdmin, (req, res, next) => {
   Users.find({ admin: false })
-    .populate("groups")
     .then((users) => res.status(200).json(users))
     .catch((err) => res.json(err));
 });
@@ -39,29 +38,52 @@ router.post("/signup", (req, res, next) => {
 });
 
 router.post("/add-friend", verifyUser, (req, res, next) => {
-  if (req.user.friends.find((id) => id == req.body.addId)) {
+  if (req.user.friends.find((id) => id.toString() == req.body.addId)) {
     res.send({ success: false, err: "Already friend" });
     return;
   }
-  Users.updateOne(
+  Users.findOneAndUpdate(
     { _id: req.user._id },
     {
       $push: { friends: mongoose.Types.ObjectId(req.body.addId) },
-      $pull: { incomingReq: req.body.addId },
+      $pull: { incomingReq: mongoose.Types.ObjectId(req.body.addId) },
     }
   )
-    .then(() => {
-      Users.updateOne(
+    .then(async (user) => {
+      if (
+        user.chat.find((chat) => chat.to.toString() == req.body.addId) ==
+        undefined
+      ) {
+        user.chat = [
+          ...user.chat,
+          { to: mongoose.Types.ObjectId(req.body.addId), messages: [] },
+        ];
+        await user.save();
+      }
+      Users.findOneAndUpdate(
         { _id: req.body.addId },
         {
-          $push: { friends: req.user._id },
-          $pull: { incomingReq: req.user._id },
+          $push: { friends: mongoose.Types.ObjectId(req.user._id) },
+          $pull: { incomingReq: mongoose.Types.ObjectId(req.user._id) },
         }
       )
-        .then(() => res.send({ success: true }))
-        .catch((err) => res.status(500).send({ ...err, success: false }));
+        .then(async (user) => {
+          if (
+            user.chat.find(
+              (chat) => chat.to.toString() == req.user._id.toString()
+            ) == undefined
+          ) {
+            user.chat = [
+              ...user.chat,
+              { to: mongoose.Types.ObjectId(req.user._id), messages: [] },
+            ];
+            await user.save();
+          }
+          res.send({ success: true });
+        })
+        .catch((err) => res.status(500).send({ err, success: false }));
     })
-    .catch((err) => res.status(500).send({ ...err, success: false }));
+    .catch((err) => res.status(500).send({ err, success: false }));
 });
 
 router.delete("/remove-friend", verifyUser, (req, res, next) => {
@@ -83,21 +105,21 @@ router.delete("/remove-friend", verifyUser, (req, res, next) => {
 router.get("/all-chats", verifyUser, async (req, res) => {
   const personal = await Users.findOne({ _id: req.user._id })
     .populate({
-      path: "chats",
+      path: "chat",
       populate: [
         {
           path: "to messages",
         },
       ],
     })
-    .then((user) => user.chats || []);
+    .then((user) => user.chat || []);
   let groups = [
     ...(await Group.find({ _id: { $in: req.user.groups } })
       .populate({
         path: "messages members admins createdBy",
         populate: [
           {
-            path: "user text",
+            path: "user",
           },
         ],
       })
