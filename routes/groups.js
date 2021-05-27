@@ -33,17 +33,22 @@ router.post("/add-admins", verifyUser, async (req, res, next) => {
 });
 
 router.post("/add", verifyUser, async (req, res) => {
-  await Users.updateMany(
-    { _id: { $in: req.body.users } },
+  const userGroups = await Users.findOne({ _id: req.body.user }).then(
+    (user) => user.groups
+  );
+  if (userGroups.find((group) => group.toString() == req.body.groupId)) {
+    res.send({ success: false, err: "User is already in the group" });
+    return;
+  }
+  await Users.updateOne(
+    { _id: req.body.user },
     { $push: { groups: Types.ObjectId(req.body.groupId) } }
   );
   await Group.updateOne(
     { _id: req.body.groupId },
     {
       $push: {
-        members: {
-          $each: req.body.users.map((user) => Types.ObjectId(user)),
-        },
+        members: Types.ObjectId(req.body.user),
       },
     }
   );
@@ -67,19 +72,22 @@ router.delete("/leave", verifyUser, async (req, res) => {
   res.send({ success: true });
 });
 
-router.delete("/remove-members", verifyUser, async (req, res, next) => {
+router.post("/remove-member", verifyUser, async (req, res, next) => {
   const group = await Group.findOne({ _id: req.body.groupId }).then(
     (group) => group
   );
-  if (group.admins.find((admin) => admin == req.user._id)) {
-    req.body.users.forEach(async (user) => {
+  if (
+    group.admins.find((admin) => admin.toString() == req.user._id.toString())
+  ) {
+    (async (user) => {
       group.members.remove(user);
-      await Users.updateOne(
+      await group.save();
+      await Users.findOneAndUpdate(
         { _id: user },
-        { $pull: { groups: req.body.groupId } }
-      );
-    });
-    res.send({ success: true });
+        { $pull: { groups: Types.ObjectId(req.body.groupId) } }
+      ).then((data) => console.log(data));
+      res.send({ success: true });
+    })(req.body.user);
   } else res.send({ err: "You are not admin" });
 });
 

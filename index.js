@@ -30,7 +30,7 @@ const client = mongoose.connect(process.env.MONGO_URI, {
 });
 
 client
-  .then((db) => {
+  .then(async (db) => {
     console.log("Connected to the database");
   })
   .catch((err) => console.log(err));
@@ -57,8 +57,10 @@ io.on("connection", (socket) => {
   });
   socket.on("personal message", async ({ msg, to, tagged }) => {
     const pm = await sendMessageToUser(msg, idsToNames[socket.id], to, tagged);
-    if (pm !== false)
-      io.to(socketIds[to]).emit("incoming personal message", pm);
+    if (pm !== false) {
+      socket.to(socketIds[to]).emit("incoming personal message", pm);
+      socket.emit("incoming personal message", pm);
+    }
   });
   socket.on("send friend request", async ({ from, to }) => {
     const user = await sendFriendRequest(from, to);

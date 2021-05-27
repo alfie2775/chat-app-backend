@@ -21,8 +21,10 @@ const sendMessageToGroup = async (text, user, groupId, tagged) => {
     .then((res) => res)
     .catch((err) => ({ err }));
   if (res.err) return false;
-  await gm.save();
-  return gm;
+  return await gm
+    .save()
+    .then((gm) => gm.populate("user").execPopulate())
+    .then((gm) => gm);
 };
 
 const addMessage = async (from, to, message) => {
