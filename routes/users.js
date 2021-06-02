@@ -45,7 +45,7 @@ router.post("/add-friend", verifyUser, (req, res, next) => {
   Users.findOneAndUpdate(
     { _id: req.user._id },
     {
-      $push: { friends: mongoose.Types.ObjectId(req.body.addId) },
+      $addToSet: { friends: mongoose.Types.ObjectId(req.body.addId) },
       $pull: { incomingReq: mongoose.Types.ObjectId(req.body.addId) },
     }
   )
@@ -63,7 +63,7 @@ router.post("/add-friend", verifyUser, (req, res, next) => {
       Users.findOneAndUpdate(
         { _id: req.body.addId },
         {
-          $push: { friends: mongoose.Types.ObjectId(req.user._id) },
+          $addToSet: { friends: mongoose.Types.ObjectId(req.user._id) },
           $pull: { incomingReq: mongoose.Types.ObjectId(req.user._id) },
         }
       )
@@ -86,7 +86,7 @@ router.post("/add-friend", verifyUser, (req, res, next) => {
     .catch((err) => res.status(500).send({ err, success: false }));
 });
 
-router.delete("/remove-friend", verifyUser, (req, res, next) => {
+router.post("/remove-friend", verifyUser, (req, res, next) => {
   Users.updateOne(
     { _id: req.user._id },
     { $pull: { friends: mongoose.Types.ObjectId(req.body.deleteId) } }
@@ -140,6 +140,23 @@ router.get("/incoming-requests", verifyUser, async (req, res) => {
     .populate("incomingReq")
     .then((friends) => friends.incomingReq);
   res.send(ir);
+});
+
+router.post("/search", verifyUser, async (req, res) => {
+  const name = req.body.name.toLowerCase();
+  if (name.startsWith("@")) {
+    await Users.find({ username: new RegExp(`^${name.substr(1)}`) }).then(
+      (users) => res.send({ success: true, users })
+    );
+  } else {
+    await Users.find({}).then((users) => {
+      users = users.filter(
+        (user) =>
+          `${user.firstname} ${user.lastname}`.toLowerCase().search(name) !== -1
+      );
+      res.send({ success: true, users });
+    });
+  }
 });
 
 module.exports = router;

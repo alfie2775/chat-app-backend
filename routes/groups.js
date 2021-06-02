@@ -22,14 +22,20 @@ router.post("/create", verifyUser, async (req, res, next) => {
   else res.send({ success: true, group });
 });
 
-router.post("/add-admins", verifyUser, async (req, res, next) => {
-  let { admins, groupId } = req.body;
-  admins = admins.map((admin) => Types.ObjectId(admin));
-  await Group.updateOne(
-    { _id: groupId },
-    { $push: { admins: { $each: admins } } }
-  );
+router.post("/add-admin", verifyUser, async (req, res, next) => {
+  let { admin, groupId } = req.body;
+  admin = Types.ObjectId(admin);
+  await Group.updateOne({ _id: groupId }, { $addToSet: { admins: admin } });
   res.send({ success: true });
+});
+
+router.post("/remove-admin", verifyUser, async (req, res) => {
+  Group.updateOne(
+    { _id: req.body.groupId },
+    { $pull: { admins: req.body.admin } }
+  )
+    .then(() => res.send({ success: true }))
+    .catch((err) => ({ err, success: false }));
 });
 
 router.post("/add", verifyUser, async (req, res) => {
@@ -42,12 +48,12 @@ router.post("/add", verifyUser, async (req, res) => {
   }
   await Users.updateOne(
     { _id: req.body.user },
-    { $push: { groups: Types.ObjectId(req.body.groupId) } }
+    { $addToSet: { groups: Types.ObjectId(req.body.groupId) } }
   );
   await Group.updateOne(
     { _id: req.body.groupId },
     {
-      $push: {
+      $addToSet: {
         members: Types.ObjectId(req.body.user),
       },
     }
@@ -73,9 +79,7 @@ router.delete("/leave", verifyUser, async (req, res) => {
 });
 
 router.post("/remove-member", verifyUser, async (req, res, next) => {
-  const group = await Group.findOne({ _id: req.body.groupId }).then(
-    (group) => group
-  );
+  const group = await Group.findOne({ _id: req.body.groupId });
   if (
     group.admins.find((admin) => admin.toString() == req.user._id.toString())
   ) {
@@ -85,7 +89,7 @@ router.post("/remove-member", verifyUser, async (req, res, next) => {
       await Users.findOneAndUpdate(
         { _id: user },
         { $pull: { groups: Types.ObjectId(req.body.groupId) } }
-      ).then((data) => console.log(data));
+      );
       res.send({ success: true });
     })(req.body.user);
   } else res.send({ err: "You are not admin" });

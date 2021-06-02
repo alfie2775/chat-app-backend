@@ -16,6 +16,7 @@ const {
   sendMessageToGroup,
   sendMessageToUser,
 } = require("./controllers/messages");
+const { sendFriendRequest } = require("./controllers/friends");
 const { getGroupMembers } = require("./controllers/groups");
 const io = new socketio.Server(server, {
   cors: {
@@ -62,7 +63,9 @@ io.on("connection", (socket) => {
       socket.emit("incoming personal message", pm);
     }
   });
-  socket.on("send friend request", async ({ from, to }) => {
+  socket.on("send friend request", async ({ to }) => {
+    let from = idsToNames[socket.id];
+    console.log(from, to);
     const user = await sendFriendRequest(from, to);
     io.to(socketIds[to]).emit("incoming friend request", user);
   });
