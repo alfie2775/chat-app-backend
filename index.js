@@ -18,6 +18,7 @@ const {
 } = require("./controllers/messages");
 const { sendFriendRequest } = require("./controllers/friends");
 const { getGroupMembers } = require("./controllers/groups");
+const { setOnline } = require("./controllers/users");
 const io = new socketio.Server(server, {
   cors: {
     origin: "*",
@@ -38,10 +39,12 @@ client
 
 var socketIds = {};
 var idsToNames = {};
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
   socketIds[socket.handshake.query.id] = socket.id;
   console.log(socket.handshake.query.id, "has been joined");
   idsToNames[socket.id] = socket.handshake.query.id;
+  await setOnline(idsToNames[socket.id], true);
+  socket.broadcast.emit("set online", { user: idsToNames[socket.id] });
   socket.on("group message", async ({ groupId, msg, tagged }) => {
     console.log(groupId, msg);
     const gm = await sendMessageToGroup(
@@ -69,11 +72,12 @@ io.on("connection", (socket) => {
     const user = await sendFriendRequest(from, to);
     io.to(socketIds[to]).emit("incoming friend request", user);
   });
-  socket.on("disconnecting", () => {
+  socket.on("disconnecting", async () => {
     delete idsToNames[socketIds[socket.id]];
     delete socketIds[socket.id];
     console.log("a user is gonna fucked up");
-    socket.broadcast.emit("incoming message", "a user gone");
+    await setOnline(idsToNames[socket.id], false);
+    socket.broadcast.emit("set offline", { user: idsToNames[socket.id] });
   });
 });
 
